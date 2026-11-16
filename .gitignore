@@ -1,0 +1,31 @@
+# Dependências
+node_modules/
+
+# Builds
+.next/
+out/
+dist/
+
+# Ambiente / segredos — NUNCA versionar .env
+.env
+.env.*
+!.env.example
+
+# Maestri (metadados locais do canvas)
+.maestri/
+
+# Testes / cobertura
+coverage/
+
+# Logs e temporários
+*.log
+npm-debug.log*
+*.tsbuildinfo
+.DS_Store
+
+# IDE
+.idea/
+.vscode/
+
+# Precaução: arquivos de upload locais (MVP usa BLOB no Postgres)
+uploads/

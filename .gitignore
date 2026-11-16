@@ -20,8 +20,26 @@ coverage/
 # Logs e temporários
 *.log
 npm-debug.log*
-*.tsbuildinfo
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
 .DS_Store
+
+# Builds (complemento)
+/build
+*.pem
+
+# Vercel (deploy eventual)
+.vercel
+
+# TypeScript / Next
+next-env.d.ts
+*.tsbuildinfo
+
+# PnP (caso futuro)
+/.pnp
+.pnp.*
+.yarn/*
 
 # IDE
 .idea/

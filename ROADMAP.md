@@ -32,8 +32,8 @@ Inicia atendendo a área **COIDS** e é projetada para se tornar produto geral (
 
 ## 4. Roadmap por Pacotes (WBS)
 
-- [ ] **① Fundação** — scaffold Next.js + TS + Prisma + Postgres; qualidade (eslint/prettier/type-check); Docker + docker-compose (Postgres); estrutura de pastas; `.env.example`.
-- [ ] **② Multi-área & Auth FreeIPA** — modelos (Area, Usuario, Sessao, AreaMembro); login FreeIPA via **ports/adapters** (`IpaProvider`: `LdapsIpaProvider` prod + `MockIpaProvider` dev/test, seletor por `IPA_MODE`); sessão em Postgres; criação de área em auto-serviço; Hub "Minhas Áreas"; dashboard da área; gestão de membros + transferência de admin.
+- [x] **① Fundação** — scaffold Next.js + TS + Prisma + Postgres; qualidade (eslint/prettier/type-check); Docker + docker-compose (Postgres); estrutura de pastas; `.env.example`. ✅
+- [x] **② Multi-área & Auth FreeIPA** — modelos (Area, Usuario, Sessao, AreaMembro); login FreeIPA via **ports/adapters** (`IpaProvider`: `LdapsIpaProvider` prod + `MockIpaProvider` dev/test, seletor por `IPA_MODE`); sessão em Postgres; criação de área em auto-serviço; Hub "Minhas Áreas"; dashboard da área; gestão de membros + transferência de admin. ✅
 - [ ] **③ CRUD de Patrimônios** — schemas Zod; API list/create/read/update/delete; busca + filtros; forms; upload de foto (BLOB).
 - [ ] **④ Movimentações / Histórico** — registrar trocas de detentor/localização; timeline no detalhe; KPI de pendências.
 - [ ] **⑤ Hardening** — headers (CSP/HSTS/nosniff); rate limiting de produção (login + criação de área); revisita anti-IDOR; serving de foto seguro; gestão de segredos.
@@ -55,8 +55,8 @@ Inicia atendendo a área **COIDS** e é projetada para se tornar produto geral (
 
 | Pacote | Dev | SecOps (GATE 1) | QA (GATE 2) |
 |---|---|---|---|
-| ① Fundação | ⬜ | ⬜ | ⬜ |
-| ② Multi-área & Auth | ⬜ | ⬜ | ⬜ |
+| ① Fundação | ✅ | ✅ (GATE 1) | ✅ (GATE 2) |
+| ② Multi-área & Auth | ✅ | ✅ (GATE 1) | ✅ (GATE 2) |
 | ③ CRUD + Foto | ⬜ | ⬜ | ⬜ |
 | ④ Movimentações | ⬜ | ⬜ | ⬜ |
 | ⑤ Hardening | ⬜ | ⬜ | ⬜ |

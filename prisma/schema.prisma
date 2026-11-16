@@ -1,0 +1,131 @@
+// Patrimônio — schema Prisma (fonte: Nota "Patrimônio — Arquitetura & Plano")
+// Multi-tenant por area_id. Senhas NUNCA armazenadas (FreeIPA é o IdP).
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Papel {
+  admin_area
+  secretaria
+  usuario
+}
+
+enum Visibilidade {
+  privada
+  publica_leitura
+}
+
+model Area {
+  id           Int           @id @default(autoincrement())
+  nome         String
+  slug         String        @unique
+  descricao    String?
+  visibilidade Visibilidade @default(privada)
+  ativo        Boolean       @default(true)
+  criadoPor    Int           @map("criado_por")
+  criadoEm     DateTime      @default(now()) @map("criado_em")
+  membros      AreaMembro[]
+  patrimonios  Patrimonio[]
+
+  @@map("area")
+}
+
+// Sem senha: FreeIPA é o IdP (somente autenticação).
+model Usuario {
+  id          Int          @id @default(autoincrement())
+  uid         String       @unique
+  email       String?
+  dn          String?
+  nome        String
+  ativo       Boolean      @default(true)
+  ultimoLogin DateTime?    @map("ultimo_login")
+  sessoes     Sessao[]
+  areas       AreaMembro[]
+
+  @@map("usuario")
+}
+
+// Sessão revogável: token aleatório no cookie, hash sha256 persistido aqui.
+model Sessao {
+  id        Int      @id @default(autoincrement())
+  userId    Int      @map("user_id")
+  tokenHash String   @unique @map("token_hash")
+  expiresAt DateTime @map("expires_at")
+  createdAt DateTime @default(now()) @map("created_at")
+  usuario   Usuario @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("sessao")
+}
+
+model AreaMembro {
+  id           Int      @id @default(autoincrement())
+  areaId       Int      @map("area_id")
+  usuarioId    Int      @map("usuario_id")
+  papel        Papel
+  adicionadoPor Int?    @map("adicionado_por")
+  ativo        Boolean  @default(true)
+  area         Area     @relation(fields: [areaId], references: [id], onDelete: Cascade)
+  usuario      Usuario  @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+
+  @@unique([areaId, usuarioId])
+  @@map("area_membro")
+}
+
+model Patrimonio {
+  id            Int             @id @default(autoincrement())
+  areaId        Int             @map("area_id")
+  numero        String
+  descricao     String
+  marca         String?
+  modelo        String?
+  serie         String?
+  responsavel   String?
+  // Opcionais: alimentam KPI/filtro de pendências (pacotes ④).
+  detentor      String?
+  localizacao   String?
+  criadoPor     Int             @map("criado_por")
+  atualizadoPor Int?            @map("atualizado_por")
+  criadoEm      DateTime        @default(now()) @map("criado_em")
+  atualizadoEm  DateTime        @updatedAt @map("atualizado_em")
+  area          Area            @relation(fields: [areaId], references: [id], onDelete: Cascade)
+  fotos         PatrimonioFoto[]
+  movimentacoes Movimentacao[]
+
+  @@unique([areaId, numero])
+  @@map("patrimonio")
+}
+
+// Foto como BLOB no Postgres, atrás da abstração src/lib/storage.ts (troca p/ S3 no futuro).
+model PatrimonioFoto {
+  id           Int        @id @default(autoincrement())
+  patrimonioId Int        @map("patrimonio_id")
+  data         Bytes
+  contentType  String     @map("content_type")
+  tamanho      Int        @map("tamanho")
+  patrimonio   Patrimonio @relation(fields: [patrimonioId], references: [id], onDelete: Cascade)
+
+  @@map("patrimonio_foto")
+}
+
+model Movimentacao {
+  id             Int        @id @default(autoincrement())
+  patrimonioId   Int        @map("patrimonio_id")
+  deDetentor     String?    @map("de_detentor")
+  paraDetentor   String?    @map("para_detentor")
+  deLocal        String?    @map("de_local")
+  paraLocal      String?    @map("para_local")
+  motivo         String?
+  feitoPor       Int        @map("feito_por")
+  data           DateTime   @default(now())
+  patrimonio     Patrimonio @relation(fields: [patrimonioId], references: [id], onDelete: Cascade)
+
+  @@index([patrimonioId, data])
+  @@map("movimentacao")
+}

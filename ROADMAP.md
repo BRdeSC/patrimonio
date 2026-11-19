@@ -26,15 +26,18 @@ Inicia atendendo a área **COIDS** e é projetada para se tornar produto geral (
 
 | Papel | Permissões |
 |---|---|
-| **admin_area** (responsável maior — quem criou ou recebeu transferência) | CRUD + excluir + gerenciar membros/papéis + config (visibilidade) + transferir admin |
-| **secretaria** | Criar/editar patrimônios + foto |
-| **usuario** | Só visualiza |
+| **OWNER** (responsável maior — quem criou ou recebeu transferência) | CRUD + excluir + gerenciar membros/papéis + config (visibilidade) + transferir admin |
+| **OPERATOR** | Criar/editar patrimônios + foto |
+| **VIEWER** | Só visualiza |
 
 ## 4. Roadmap por Pacotes (WBS)
 
 - [x] **① Fundação** — scaffold Next.js + TS + Prisma + Postgres; qualidade (eslint/prettier/type-check); Docker + docker-compose (Postgres); estrutura de pastas; `.env.example`. ✅
 - [x] **② Multi-área & Auth FreeIPA** — modelos (Area, Usuario, Sessao, AreaMembro); login FreeIPA via **ports/adapters** (`IpaProvider`: `LdapsIpaProvider` prod + `MockIpaProvider` dev/test, seletor por `IPA_MODE`); sessão em Postgres; criação de área em auto-serviço; Hub "Minhas Áreas"; dashboard da área; gestão de membros + transferência de admin. ✅
-- [ ] **③ CRUD de Patrimônios** — schemas Zod; API list/create/read/update/delete; busca + filtros; forms; upload de foto (BLOB).
+- [x] **③ CRUD de Patrimônios** — schemas Zod; API list/create/read/update/delete; busca + filtros; forms; upload de foto (BLOB); UI (aba "Patrimônios"). ✅
+- [x] **③-A Hub & Áreas Públicas** — hub "Minhas Áreas", leitura pública opt-in, modo escuro (next-themes). ✅
+- [x] **③-B UX & Papéis (pedidos do dono)** — D1–D9: ajustes UX, ordenação da lista, "Atualizado por" (detalhe + resposta PATCH + busca ao abrir), detalhe=read-only / editar=gestão de fotos (ops registram o operador), alinhamento da galeria, capa servida com no-cache. ✅ (92 testes, 9 gates)
+- [ ] **③-C Docker full-stack** — Dockerfile (multi-stage, `output: standalone` já configurado), entrypoint c/ `prisma db push` idempotente + seed opcional, `.dockerignore`, service `web` no compose (porta 3100, sem conflito c/ dev), mount opcional da CA FreeIPA (cabe ao ⑧). ⏳
 - [ ] **④ Movimentações / Histórico** — registrar trocas de detentor/localização; timeline no detalhe; KPI de pendências.
 - [ ] **⑤ Hardening** — headers (CSP/HSTS/nosniff); rate limiting de produção (login + criação de área); revisita anti-IDOR; serving de foto seguro; gestão de segredos.
 - [ ] **⑥ Testes** — unit (Zod, isolamento tenant) + integração (CRUD, permissões, IDOR negativo) + suíte de abuso.
@@ -57,7 +60,10 @@ Inicia atendendo a área **COIDS** e é projetada para se tornar produto geral (
 |---|---|---|---|
 | ① Fundação | ✅ | ✅ (GATE 1) | ✅ (GATE 2) |
 | ② Multi-área & Auth | ✅ | ✅ (GATE 1) | ✅ (GATE 2) |
-| ③ CRUD + Foto | ⬜ | ⬜ | ⬜ |
+| ③ CRUD + Foto | ✅ (92 testes) | ✅ (2×) | ✅ (2×) |
+| ③-A Hub & Áreas Públicas | ✅ | ✅ | ✅ |
+| ③-B UX & Papéis (D1–D9) | ✅ | ✅ | ✅ |
+| ③-C Docker full-stack | ⏳ Dev | ⬜ | ⬜ |
 | ④ Movimentações | ⬜ | ⬜ | ⬜ |
 | ⑤ Hardening | ⬜ | ⬜ | ⬜ |
 | ⑥ Testes | ⬜ | — | ⬜ |

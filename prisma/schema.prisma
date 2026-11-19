@@ -3,6 +3,7 @@
 
 generator client {
   provider = "prisma-client-js"
+  binaryTargets = ["native", "debian-openssl-3.0.x"]
 }
 
 datasource db {
@@ -11,9 +12,9 @@ datasource db {
 }
 
 enum Papel {
-  admin_area
-  secretaria
-  usuario
+  OWNER
+  OPERATOR
+  VIEWER
 }
 
 enum Visibilidade {
@@ -103,14 +104,18 @@ model Patrimonio {
 }
 
 // Foto como BLOB no Postgres, atrás da abstração src/lib/storage.ts (troca p/ S3 no futuro).
+// ordem: posição na galeria (drag & drop — pedido do dono). Fotos antigas ficam 0;
+// a ordem efetiva é (ordem asc, id asc) → compatível com o comportamento antigo.
 model PatrimonioFoto {
   id           Int        @id @default(autoincrement())
   patrimonioId Int        @map("patrimonio_id")
   data         Bytes
   contentType  String     @map("content_type")
   tamanho      Int        @map("tamanho")
+  ordem        Int        @default(0)
   patrimonio   Patrimonio @relation(fields: [patrimonioId], references: [id], onDelete: Cascade)
 
+  @@index([patrimonioId, ordem])
   @@map("patrimonio_foto")
 }
 

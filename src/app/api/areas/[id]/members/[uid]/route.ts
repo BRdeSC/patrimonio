@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/prisma";
-import { getAreaContext, canManageArea } from "@/lib/access";
+import { getAreaContext, canReadArea, canManageArea } from "@/lib/access";
 import { getSessionUser } from "@/lib/session";
 import { areaIdParamSchema, readJsonBody } from "@/lib/api";
 import { updateMemberSchema } from "@/lib/validators/member";
@@ -32,6 +32,10 @@ async function resolve(request: Request, ctx: Ctx): Promise<Resolved> {
   if (!area) {
     return { error: Response.json({ erro: "Área não encontrada" }, { status: 404 }) } as const;
   }
+  // Não-membro de área privada → 404 (classe F-1), antes do check de escrita.
+  if (!canReadArea(area)) {
+    return { error: Response.json({ erro: "Área não encontrada" }, { status: 404 }) } as const;
+  }
   if (!canManageArea(area.papel)) {
     return { error: Response.json({ erro: "Acesso negado" }, { status: 403 }) } as const;
   }
@@ -50,22 +54,26 @@ async function resolve(request: Request, ctx: Ctx): Promise<Resolved> {
     } as const;
   }
   const adminsAtivos = await prisma.areaMembro.count({
-    where: { areaId: area.id, papel: "admin_area", ativo: true },
+    where: { areaId: area.id, papel: "OWNER", ativo: true },
   });
   return { user, area, usuario, membro, adminsAtivos } as const;
 }
 
-// true se a mudança tiraria da área o único admin ativo.
-function tirariaUltimoAdmin(
+// Mensagem única do guard do último OWNER (sem vazar internals).
+const ERRO_ULTIMO_OWNER = "A área precisa ter ao menos um OWNER";
+
+// true se a mudança deixaria a área sem nenhum OWNER ativo
+// ("último OWNER" = count de membros ativos com papel OWNER == 1).
+function tirariaUltimoOwner(
   membro: { papel: string; ativo: boolean },
-  adminsAtivos: number,
+  ownersAtivos: number,
   novoPapel?: string,
   novoAtivo?: boolean,
 ): boolean {
-  if (membro.papel !== "admin_area" || !membro.ativo || adminsAtivos !== 1) return false;
-  const perdeAdmin = novoPapel !== undefined && novoPapel !== "admin_area";
+  if (membro.papel !== "OWNER" || !membro.ativo || ownersAtivos !== 1) return false;
+  const perdePapel = novoPapel !== undefined && novoPapel !== "OWNER";
   const ficaInativo = novoAtivo !== undefined && !novoAtivo;
-  return perdeAdmin || ficaInativo;
+  return perdePapel || ficaInativo;
 }
 
 export async function PATCH(request: Request, ctx: Ctx) {
@@ -76,16 +84,14 @@ export async function PATCH(request: Request, ctx: Ctx) {
   const body = await readJsonBody(request);
   const parsed = updateMemberSchema.safeParse(body);
   if (!parsed.success) {
-    // Rejeita papel=admin_area (allowlist) e campos fora do contrato.
+    // Rejeita papéis fora do enum e campos fora do contrato.
     return Response.json({ erro: "Dados inválidos" }, { status: 400 });
   }
   const { papel, ativo } = parsed.data;
 
-  if (tirariaUltimoAdmin(membro, adminsAtivos, papel, ativo)) {
-    return Response.json(
-      { erro: "Não é possível remover o único admin ativo. Transfira a administração primeiro." },
-      { status: 400 },
-    );
+  // Guard do último OWNER: demover/desativar o ÚNICO OWNER ativo → 409.
+  if (tirariaUltimoOwner(membro, adminsAtivos, papel, ativo)) {
+    return Response.json({ erro: ERRO_ULTIMO_OWNER }, { status: 409 });
   }
 
   const atualizado = await prisma.areaMembro.update({
@@ -102,17 +108,15 @@ export async function PATCH(request: Request, ctx: Ctx) {
   });
 }
 
-// Remove membro (admin). Auto-remoção do único admin é bloqueada.
+// Remove membro (OWNER). A remoção do ÚNICO OWNER ativo é bloqueada (guard 409).
 export async function DELETE(request: Request, ctx: Ctx) {
   const resolved = await resolve(request, ctx);
   if ("error" in resolved) return resolved.error;
   const { membro, adminsAtivos } = resolved;
 
-  if (membro.papel === "admin_area" && membro.ativo && adminsAtivos === 1) {
-    return Response.json(
-      { erro: "Não é possível remover o único admin ativo. Transfira a administração primeiro." },
-      { status: 400 },
-    );
+  // Guard do último OWNER: a remoção do ÚNICO OWNER ativo → 409.
+  if (membro.papel === "OWNER" && membro.ativo && adminsAtivos === 1) {
+    return Response.json({ erro: ERRO_ULTIMO_OWNER }, { status: 409 });
   }
 
   await prisma.areaMembro.delete({ where: { id: membro.id } });

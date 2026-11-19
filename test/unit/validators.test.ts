@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { loginSchema } from "@/lib/validators/auth";
 import { createAreaSchema, updateAreaSchema } from "@/lib/validators/area";
-import { addMemberSchema, transferAdminSchema, updateMemberSchema } from "@/lib/validators/member";
+import { addMemberSchema, updateMemberSchema } from "@/lib/validators/member";
 
 describe("loginSchema", () => {
   it("aceita credenciais válidas", () => {
@@ -58,30 +58,30 @@ describe("updateAreaSchema (allowlist anti mass-assignment)", () => {
 });
 
 describe("schemas de membros", () => {
-  it("addMemberSchema rejeita papel=admin_area (anti mass-assignment)", () => {
-    expect(addMemberSchema.safeParse({ uid: "x.y", papel: "admin_area" }).success).toBe(false);
+  it("addMemberSchema aceita os 3 papéis (OWNER concedível desde o turno D2)", () => {
+    expect(addMemberSchema.safeParse({ uid: "x.y", papel: "OWNER" }).success).toBe(true);
+    expect(addMemberSchema.safeParse({ uid: "x.y", papel: "OPERATOR" }).success).toBe(true);
+    expect(addMemberSchema.safeParse({ uid: "x.y", papel: "VIEWER" }).success).toBe(true);
   });
 
-  it("addMemberSchema aceita secretaria/usuário", () => {
-    expect(addMemberSchema.safeParse({ uid: "x.y", papel: "secretaria" }).success).toBe(true);
-    expect(addMemberSchema.safeParse({ uid: "x.y", papel: "usuario" }).success).toBe(true);
+  it("addMemberSchema rejeita papel fora do enum", () => {
+    expect(addMemberSchema.safeParse({ uid: "x.y", papel: "ADMIN" }).success).toBe(false);
   });
 
-  it("updateMemberSchema rejeita papel=admin_area", () => {
-    expect(updateMemberSchema.safeParse({ papel: "admin_area" }).success).toBe(false);
+  it("updateMemberSchema aceita papel=OWNER (guard do último OWNER vive na rota)", () => {
+    expect(updateMemberSchema.safeParse({ papel: "OWNER" }).success).toBe(true);
   });
 
   it("updateMemberSchema aceita alterações parciais válidas", () => {
     expect(updateMemberSchema.safeParse({ ativo: false }).success).toBe(true);
-    expect(updateMemberSchema.safeParse({ papel: "usuario" }).success).toBe(true);
+    expect(updateMemberSchema.safeParse({ papel: "VIEWER" }).success).toBe(true);
+  });
+
+  it("updateMemberSchema rejeita papel fora do enum", () => {
+    expect(updateMemberSchema.safeParse({ papel: "ADMIN" }).success).toBe(false);
   });
 
   it("updateMemberSchema rejeita objeto vazio", () => {
     expect(updateMemberSchema.safeParse({}).success).toBe(false);
-  });
-
-  it("transferAdminSchema exige uid", () => {
-    expect(transferAdminSchema.safeParse({ uid: "x.y" }).success).toBe(true);
-    expect(transferAdminSchema.safeParse({}).success).toBe(false);
   });
 });

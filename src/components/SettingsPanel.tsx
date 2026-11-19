@@ -3,7 +3,7 @@
 import { useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 
-// Configurações da área (admin_area): nome, descrição, visibilidade, desativar.
+// Configurações da área (OWNER): nome, descrição, visibilidade + excluir (hard).
 export function SettingsPanel({
   areaId,
   nomeInicial,
@@ -45,8 +45,16 @@ export function SettingsPanel({
     }
   }
 
-  async function onDesativar() {
-    if (!window.confirm("Desativar esta área? Ela sai do hub de todos os membros.")) return;
+  async function onExcluir() {
+    // Confirmação FORTE (mesmo padrão do ③ em PatrimoniosPanel): digitar o nome.
+    if (!window.confirm(`Excluir permanentemente a área "${nome}"?\n\nTODOS os dados (patrimônios, fotos, membros) serão APAGADOS e não podem ser recuperados.\n\nDigite o nome da área para confirmar.`))
+      return;
+    const confirmado = window.prompt("Digite o nome da área para confirmar:", "");
+    if (confirmado === null) return;
+    if (confirmado.trim() !== nome.trim()) {
+      setErro("Confirmação cancelada: o nome digitado não corresponde.");
+      return;
+    }
     setErro(null);
     setOcupado(true);
     try {
@@ -138,16 +146,16 @@ export function SettingsPanel({
       <div className="rounded-xl border border-red-200 bg-red-50/50 p-5 dark:border-red-900 dark:bg-red-900/10">
         <h2 className="text-sm font-semibold text-red-800 dark:text-red-300">Zona de perigo</h2>
         <p className="mt-1 text-xs text-zinc-600 dark:text-zinc-400">
-          Desativar a área remove o acesso de todos os membros (soft delete — os dados ficam no
-          banco).
+          Excluir a área APAGA permanentemente todos os dados (patrimônios, fotos, membros) —
+          operação irrecuperável.
         </p>
         <button
           type="button"
-          onClick={onDesativar}
+          onClick={onExcluir}
           disabled={ocupado}
           className="mt-3 rounded-lg border border-red-400 px-4 py-2 text-sm font-medium text-red-700 hover:bg-red-100 disabled:opacity-60 dark:border-red-700 dark:text-red-300 dark:hover:bg-red-900/30"
         >
-          Desativar área
+          Excluir área
         </button>
       </div>
     </div>

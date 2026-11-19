@@ -27,12 +27,14 @@ export function NewAreaForm({ onCriada }: { onCriada?: (areaId: number) => void 
         setErro(data?.erro ?? "Falha ao criar a área");
         return;
       }
+      // Sempre refresh: re-busca o server component (Hub/Onboarding) para a
+      // área nova aparecer IMEDIATAMENTE em "Minhas Áreas" sem recarregar.
+      router.refresh();
       if (onCriada) {
         onCriada(data.area.id);
         return;
       }
       router.push(`/areas/${data.area.id}`);
-      router.refresh();
     } catch {
       setErro("Falha de rede. Tente novamente.");
     } finally {

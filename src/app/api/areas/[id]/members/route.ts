@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/prisma";
-import { getAreaContext, canManageArea } from "@/lib/access";
+import { getAreaContext, canReadArea, canManageArea } from "@/lib/access";
 import { getSessionUser } from "@/lib/session";
 import { areaIdParamSchema, readJsonBody } from "@/lib/api";
 import { addMemberSchema } from "@/lib/validators/member";
@@ -29,6 +29,11 @@ async function resolve(request: Request, ctx: Ctx): Promise<Resolved> {
 export async function GET(request: Request, ctx: Ctx) {
   const resolved = await resolve(request, ctx);
   if ("error" in resolved) return resolved.error;
+  // Não-membro de área privada → 404 (classe F-1); leitor público → 403
+  // (a lista de membros nunca é pública).
+  if (!canReadArea(resolved.area)) {
+    return Response.json({ erro: "Área não encontrada" }, { status: 404 });
+  }
   if (!resolved.area.isMember) {
     return Response.json({ erro: "Acesso negado" }, { status: 403 });
   }
@@ -47,11 +52,15 @@ export async function GET(request: Request, ctx: Ctx) {
   });
 }
 
-// Adiciona membro (admin). papel: secretaria|usuario (admin_area sempre rejeitado).
+// Adiciona membro (OWNER). papel: OWNER|OPERATOR|VIEWER (allowlist).
 // Usuário inexistente -> JIT placeholder.
 export async function POST(request: Request, ctx: Ctx) {
   const resolved = await resolve(request, ctx);
   if ("error" in resolved) return resolved.error;
+  // Não-membro de área privada → 404 (classe F-1).
+  if (!canReadArea(resolved.area)) {
+    return Response.json({ erro: "Área não encontrada" }, { status: 404 });
+  }
   if (!canManageArea(resolved.area.papel)) {
     return Response.json({ erro: "Acesso negado" }, { status: 403 });
   }
@@ -60,7 +69,7 @@ export async function POST(request: Request, ctx: Ctx) {
   const body = await readJsonBody(request);
   const parsed = addMemberSchema.safeParse(body);
   if (!parsed.success) {
-    // Inclui rejeição de papel=admin_area (allowlist) — anti mass-assignment.
+    // Inclui papéis fora do enum — anti mass-assignment.
     return Response.json({ erro: "Dados inválidos" }, { status: 400 });
   }
   const { uid, papel } = parsed.data;

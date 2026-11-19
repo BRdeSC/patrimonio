@@ -1,0 +1,22 @@
+# Segredos: nunca entram na imagem (somente o template de exemplo)
+.env*
+!.env.example
+
+# Dependências e artefatos de build são reconstruídos nas etapas da imagem
+node_modules
+.next
+
+# Controle de versão / artefatos de tooling
+.git
+tsconfig.tsbuildinfo
+
+# Suporte a agentes (papéis do Maestri) — não faz parte do app
+.maestri
+
+# Testes não rodam em produção
+test
+
+# Esta própria definição de imagem
+.dockerignore
+Dockerfile
+docker-compose.yml

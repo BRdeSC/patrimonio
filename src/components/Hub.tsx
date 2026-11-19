@@ -3,15 +3,25 @@
 import { useState } from "react";
 import { PapelBadge } from "./PapelBadge";
 import { NewAreaForm } from "./NewAreaForm";
+import { PublicAreasSection } from "./PublicAreasSection";
 import type { AreaResumo } from "@/lib/types";
 
-// Hub "Minhas Áreas": cards com nome, papel, itens e data de criação.
-export function Hub({ areas, nome }: { areas: AreaResumo[]; nome: string }) {
+// Hub "Minhas Áreas": cards com nome, papel, itens e data de criação,
+// seguido da seção de descoberta de áreas públicas (pacote ③-A).
+export function Hub({
+  areas,
+  publicas,
+  nome,
+}: {
+  areas: AreaResumo[];
+  publicas: AreaResumo[];
+  nome: string;
+}) {
   const [mostraNova, setMostraNova] = useState(false);
 
   return (
     <main className="flex-1 p-6">
-      <div className="mx-auto max-w-5xl">
+      <div className="mx-auto w-full px-4 lg:w-4/5">
         <div className="mb-6 flex flex-wrap items-center gap-3">
           <div>
             <h1 className="text-2xl font-semibold">Minhas Áreas</h1>
@@ -51,6 +61,8 @@ export function Hub({ areas, nome }: { areas: AreaResumo[]; nome: string }) {
             </li>
           ))}
         </ul>
+
+        <PublicAreasSection publicas={publicas} />
       </div>
     </main>
   );

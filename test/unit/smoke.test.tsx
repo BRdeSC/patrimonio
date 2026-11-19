@@ -7,14 +7,14 @@ describe("smoke", () => {
   it("renderiza PapelBadge com cada papel", () => {
     render(
       <div>
-        <PapelBadge papel="admin_area" />
-        <PapelBadge papel="secretaria" />
-        <PapelBadge papel="usuario" />
+        <PapelBadge papel="OWNER" />
+        <PapelBadge papel="OPERATOR" />
+        <PapelBadge papel="VIEWER" />
       </div>,
     );
-    expect(screen.getByText("Admin")).toBeInTheDocument();
-    expect(screen.getByText("Secretaria")).toBeInTheDocument();
-    expect(screen.getByText("Usuário")).toBeInTheDocument();
+    expect(screen.getByText("OWNER")).toBeInTheDocument();
+    expect(screen.getByText("OPERATOR")).toBeInTheDocument();
+    expect(screen.getByText("VIEWER")).toBeInTheDocument();
   });
 
   it("renderiza 'Leitura' quando não há papel (leitura pública)", () => {

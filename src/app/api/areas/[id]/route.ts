@@ -33,8 +33,9 @@ export async function GET(request: Request, ctx: Ctx) {
   const resolved = await resolve(request, ctx);
   if ("error" in resolved) return resolved.error;
   // Leitura: membros, ou qualquer autenticado se publica_leitura (somente leitura).
+  // Não-membro de área privada → 404 idêntico ao inexistente (zero vazamento de existência).
   if (!canReadArea(resolved.area)) {
-    return Response.json({ erro: "Acesso negado" }, { status: 403 });
+    return Response.json({ erro: "Área não encontrada" }, { status: 404 });
   }
   return Response.json({ area: resolved.area });
 }
@@ -42,6 +43,10 @@ export async function GET(request: Request, ctx: Ctx) {
 export async function PATCH(request: Request, ctx: Ctx) {
   const resolved = await resolve(request, ctx);
   if ("error" in resolved) return resolved.error;
+  // Não-membro de área privada → 404 (mesma regra do GET, classe F-1 completa).
+  if (!canReadArea(resolved.area)) {
+    return Response.json({ erro: "Área não encontrada" }, { status: 404 });
+  }
   if (!canManageArea(resolved.area.papel)) {
     return Response.json({ erro: "Acesso negado" }, { status: 403 });
   }
@@ -84,13 +89,19 @@ export async function PATCH(request: Request, ctx: Ctx) {
   }
 }
 
-// Soft delete: desativa a área (admin).
+// Hard delete: exclui a área + cascades (membros, patrimônios, fotos) (admin).
+// CASCATES já existem no schema: AreaMembro e Patrimonio → Area (onDelete: Cascade);
+// PatrimonioFoto/Movimentacao → Patrimonio (Cascade). SEM migração.
 export async function DELETE(request: Request, ctx: Ctx) {
   const resolved = await resolve(request, ctx);
   if ("error" in resolved) return resolved.error;
+  // Não-membro de área privada → 404 (mesma regra do GET, classe F-1 completa).
+  if (!canReadArea(resolved.area)) {
+    return Response.json({ erro: "Área não encontrada" }, { status: 404 });
+  }
   if (!canManageArea(resolved.area.papel)) {
     return Response.json({ erro: "Acesso negado" }, { status: 403 });
   }
-  await prisma.area.update({ where: { id: resolved.area.id }, data: { ativo: false } });
+  await prisma.area.delete({ where: { id: resolved.area.id } });
   return Response.json({ ok: true });
 }

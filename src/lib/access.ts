@@ -34,12 +34,34 @@ export function canReadArea(area: AreaDetalhe): boolean {
 }
 
 export function canManageArea(papel: string | null): boolean {
-  return papel === "admin_area";
+  return papel === "OWNER";
 }
 
-// secretaria+ : criar/editar patrimônios e foto.
+// OPERATOR+ : criar/editar patrimônios e foto.
 export function canEditPatrimonio(papel: string | null): boolean {
-  return papel === "admin_area" || papel === "secretaria";
+  return papel === "OWNER" || papel === "OPERATOR";
+}
+
+// Áreas públicas (publica_leitura) em que o usuário NÃO é membro ativo:
+// descoberta no hub/onboarding (pacote ③-A). papel=null → leitura apenas.
+export async function getPublicAreasForUser(userId: number): Promise<AreaResumo[]> {
+  const areas = await prisma.area.findMany({
+    where: {
+      ativo: true,
+      visibilidade: "publica_leitura",
+      NOT: { membros: { some: { usuarioId: userId, ativo: true } } },
+    },
+    include: { _count: { select: { patrimonios: true } } },
+    orderBy: { criadoEm: "asc" },
+  });
+  return areas.map((a) => ({
+    id: a.id,
+    nome: a.nome,
+    slug: a.slug,
+    papel: null,
+    itens: a._count.patrimonios,
+    criadaEm: a.criadoEm.toISOString(),
+  }));
 }
 
 export async function getAreasForUser(userId: number): Promise<AreaResumo[]> {

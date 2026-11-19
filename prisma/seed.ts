@@ -37,24 +37,66 @@ async function main() {
 
   await prisma.areaMembro.upsert({
     where: { areaId_usuarioId: { areaId: area.id, usuarioId: gestor.id } },
-    update: { papel: Papel.admin_area, ativo: true },
-    create: { areaId: area.id, usuarioId: gestor.id, papel: Papel.admin_area, adicionadoPor: gestor.id },
+    update: { papel: Papel.OWNER, ativo: true },
+    create: { areaId: area.id, usuarioId: gestor.id, papel: Papel.OWNER, adicionadoPor: gestor.id },
   });
 
   await prisma.areaMembro.upsert({
     where: { areaId_usuarioId: { areaId: area.id, usuarioId: secretaria.id } },
-    update: { papel: Papel.secretaria, ativo: true },
+    update: { papel: Papel.OPERATOR, ativo: true },
     create: {
       areaId: area.id,
       usuarioId: secretaria.id,
-      papel: Papel.secretaria,
+      papel: Papel.OPERATOR,
       adicionadoPor: gestor.id,
     },
   });
 
+  // Patrimônios de exemplo (idempotente por areaId+numero). Sem BLOB no seed.
+  const PATRIMONIOS = [
+    {
+      numero: "COIDS-0001",
+      descricao: "Notebook Dell Latitude",
+      marca: "Dell",
+      modelo: "Latitude 5440",
+      serie: "SN-NB-0001",
+      responsavel: "Gestor COIDS",
+      detentor: "Ana Souza",
+      localizacao: "COIDS — Sala 12",
+    },
+    {
+      numero: "COIDS-0002",
+      descricao: "Projetor Epson PowerLite (sem detentor)",
+      marca: "Epson",
+      modelo: "PowerLite X49",
+      serie: "SN-PR-0002",
+      responsavel: "Secretaria COIDS",
+      detentor: null,
+      localizacao: "COIDS — Auditório",
+    },
+    {
+      numero: "COIDS-0003",
+      descricao: "Impressora HP LaserJet (sem localização)",
+      marca: "HP",
+      modelo: "LaserJet M404",
+      serie: "SN-IM-0003",
+      responsavel: "Secretaria COIDS",
+      detentor: "Carlos Lima",
+      localizacao: null,
+    },
+  ];
+  for (const p of PATRIMONIOS) {
+    await prisma.patrimonio.upsert({
+      where: { areaId_numero: { areaId: area.id, numero: p.numero } },
+      update: {},
+      create: { areaId: area.id, criadoPor: gestor.id, atualizadoPor: gestor.id, ...p },
+    });
+  }
+
   console.log("Seed concluído:");
   console.log("  usuários: " + USUARIOS.map((u) => u.uid).join(", "));
-  console.log(`  área: COIDS (id=${area.id}) — admin: coids.gestor, secretaria: coids.secretaria`);
+  console.log(`  área: COIDS (id=${area.id}) — owner: coids.gestor, operator: coids.secretaria`);
+  console.log(`  patrimônios: ${PATRIMONIOS.map((p) => p.numero).join(", ")}`);
   console.log("  login demo: coids.gestor / mock123 (IPA_MODE=mock)");
 }
 

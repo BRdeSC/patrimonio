@@ -1,12 +1,11 @@
 "use client";
 
 import { useEffect, useState, type FormEvent } from "react";
-import { PapelBadge } from "./PapelBadge";
 
 type Membro = {
   uid: string;
   nome: string;
-  papel: "admin_area" | "secretaria" | "usuario";
+  papel: "OWNER" | "OPERATOR" | "VIEWER";
   ativo: boolean;
 };
 
@@ -15,11 +14,12 @@ async function lerErro(res: Response): Promise<string> {
   return data?.erro ?? `Erro ${res.status}`;
 }
 
-// Gestão de membros (admin_area): adicionar, alterar papel/ativo, remover, transferir admin.
+// Gestão de membros (OWNER): adicionar, alterar papel/ativo, remover.
+// OWNER é concedível por qualquer OWNER (guard 409 protege o último OWNER ativo).
 export function MembersPanel({ areaId }: { areaId: number }) {
   const [membros, setMembros] = useState<Membro[] | null>(null);
   const [novoUid, setNovoUid] = useState("");
-  const [novoPapel, setNovoPapel] = useState<"secretaria" | "usuario">("usuario");
+  const [novoPapel, setNovoPapel] = useState<Membro["papel"]>("VIEWER");
   const [erro, setErro] = useState<string | null>(null);
   const [msg, setMsg] = useState<string | null>(null);
   const [ocupado, setOcupado] = useState(false);
@@ -104,19 +104,6 @@ export function MembersPanel({ areaId }: { areaId: number }) {
     );
   }
 
-  function onTransferir(m: Membro) {
-    if (!window.confirm(`Transferir a administração para ${m.uid}?`)) return;
-    void aoMutar(
-      () =>
-        fetch(`/api/areas/${areaId}/transfer`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ uid: m.uid }),
-        }),
-      "Administração transferida.",
-    );
-  }
-
   return (
     <div className="space-y-6">
       <form
@@ -144,11 +131,12 @@ export function MembersPanel({ areaId }: { areaId: number }) {
           <select
             id="novo-papel"
             value={novoPapel}
-            onChange={(e) => setNovoPapel(e.target.value as "secretaria" | "usuario")}
+            onChange={(e) => setNovoPapel(e.target.value as Membro["papel"])}
             className="rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-800"
           >
-            <option value="secretaria">Secretaria</option>
-            <option value="usuario">Usuário</option>
+            <option value="OWNER">OWNER</option>
+            <option value="OPERATOR">OPERATOR</option>
+            <option value="VIEWER">VIEWER</option>
           </select>
         </div>
         <button
@@ -159,8 +147,8 @@ export function MembersPanel({ areaId }: { areaId: number }) {
           Adicionar
         </button>
         <p className="w-full text-xs text-zinc-500">
-          O admin só pode conceder papéis de secretaria/usuário — a administração é transferida
-          separadamente.
+          A área precisa manter ao menos um OWNER ativo — o último OWNER não pode ser rebaixado,
+          desativado ou removido.
         </p>
       </form>
 
@@ -183,19 +171,16 @@ export function MembersPanel({ areaId }: { areaId: number }) {
                 <p className="text-sm font-medium">{m.nome}</p>
                 <p className="text-xs text-zinc-500">{m.uid}</p>
               </div>
-              {m.papel === "admin_area" ? (
-                <PapelBadge papel="admin_area" />
-              ) : (
-                <select
-                  value={m.papel}
-                  disabled={ocupado}
-                  onChange={(e) => onAlterar(m, { papel: e.target.value as Membro["papel"] })}
-                  className="rounded-lg border border-zinc-300 bg-white px-2 py-1 text-sm dark:border-zinc-700 dark:bg-zinc-800"
-                >
-                  <option value="secretaria">Secretaria</option>
-                  <option value="usuario">Usuário</option>
-                </select>
-              )}
+              <select
+                value={m.papel}
+                disabled={ocupado}
+                onChange={(e) => onAlterar(m, { papel: e.target.value as Membro["papel"] })}
+                className="rounded-lg border border-zinc-300 bg-white px-2 py-1 text-sm dark:border-zinc-700 dark:bg-zinc-800"
+              >
+                <option value="OWNER">OWNER</option>
+                <option value="OPERATOR">OPERATOR</option>
+                <option value="VIEWER">VIEWER</option>
+              </select>
               <label className="flex items-center gap-1.5 text-sm text-zinc-600 dark:text-zinc-400">
                 <input
                   type="checkbox"
@@ -205,15 +190,7 @@ export function MembersPanel({ areaId }: { areaId: number }) {
                 />
                 Ativo
               </label>
-              <div className="ml-auto flex gap-2">
-                <button
-                  type="button"
-                  onClick={() => onTransferir(m)}
-                  disabled={ocupado || m.papel === "admin_area"}
-                  className="rounded-lg border border-zinc-300 px-3 py-1.5 text-xs hover:bg-zinc-100 disabled:opacity-50 dark:border-zinc-700 dark:hover:bg-zinc-800"
-                >
-                  Transferir admin
-                </button>
+              <div className="ml-auto">
                 <button
                   type="button"
                   onClick={() => onRemover(m)}

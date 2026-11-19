@@ -1,8 +1,10 @@
 "use client";
 
+import Link from "next/link";
 import { PapelBadge } from "./PapelBadge";
 import { AreaSwitcher } from "./AreaSwitcher";
 import { LogoutButton } from "./LogoutButton";
+import { ThemeToggle } from "./ThemeToggle";
 import type { AreaResumo } from "@/lib/types";
 
 export function AreaHeader({
@@ -25,6 +27,13 @@ export function AreaHeader({
         <PapelBadge papel={papel} />
       </div>
       <div className="ml-auto flex flex-wrap items-center gap-3">
+        <ThemeToggle />
+        <Link
+          href="/"
+          className="text-sm text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300"
+        >
+          ← Minhas Áreas
+        </Link>
         <AreaSwitcher areas={areas} areaAtualId={areaAtualId} />
         <span className="text-sm text-zinc-500">{nomeUsuario}</span>
         <LogoutButton />

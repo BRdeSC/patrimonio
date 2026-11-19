@@ -2,11 +2,12 @@
 
 import { useState } from "react";
 import { MembersPanel } from "./MembersPanel";
+import { PatrimoniosPanel } from "./PatrimoniosPanel";
 import { SettingsPanel } from "./SettingsPanel";
 
 type Tab = "patrimonios" | "membros" | "config";
 
-// Abas por papel: Patrimônios (todos); Membros e Configurações (admin_area).
+// Abas por papel: Patrimônios (todos); Membros e Configurações (OWNER).
 export function AreaTabs({
   areaId,
   papel,
@@ -16,7 +17,7 @@ export function AreaTabs({
   papel: string | null;
   inicial: { nome: string; descricao: string | null; visibilidade: string };
 }) {
-  const isAdmin = papel === "admin_area";
+  const isAdmin = papel === "OWNER";
   const [tab, setTab] = useState<Tab>("patrimonios");
 
   const abas: { id: Tab; rotulo: string }[] = [
@@ -48,11 +49,7 @@ export function AreaTabs({
         ))}
       </div>
 
-      {tab === "patrimonios" && (
-        <div className="rounded-xl border border-dashed border-zinc-300 p-10 text-center text-sm text-zinc-500 dark:border-zinc-700">
-          CRUD de patrimônios chega no pacote ③ (cadastro, busca e foto).
-        </div>
-      )}
+      {tab === "patrimonios" && <PatrimoniosPanel areaId={areaId} papel={papel} />}
       {tab === "membros" && isAdmin && <MembersPanel areaId={areaId} />}
       {tab === "config" && isAdmin && (
         <SettingsPanel

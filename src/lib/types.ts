@@ -12,7 +12,8 @@ export interface AreaResumo {
   id: number;
   nome: string;
   slug: string;
-  papel: Papel;
+  // null = não é membro (área pública em modo leitura — pacote ③-A).
+  papel: Papel | null;
   itens: number;
   criadaEm: string;
 }

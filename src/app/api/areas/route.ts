@@ -59,12 +59,12 @@ export async function POST(request: Request) {
           criadoPor: user.id,
         },
       });
-      // O autor vira responsável maior (admin_area).
+      // O autor vira responsável maior (OWNER).
       await tx.areaMembro.create({
         data: {
           areaId: criada.id,
           usuarioId: user.id,
-          papel: "admin_area" as const,
+          papel: "OWNER" as const,
           adicionadoPor: user.id,
         },
       });

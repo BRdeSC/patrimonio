@@ -20,5 +20,36 @@ services:
       timeout: 3s
       retries: 10
 
+  # App inteiro em 1 container stateless (1 imagem). Schema aplicado no boot
+  # (entrypoint: prisma db push idempotente; SEED_ON_BOOT=1 semeia o demo).
+  web:
+    build: .
+    container_name: patrimonio-web
+    restart: unless-stopped
+    # "3100:3000" evita conflito com `npm run dev` local (porta 3000).
+    # Para usar a 3000: parar o dev e sobrescrever o mapping.
+    ports:
+      - "3100:3000"
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      # Interpola as MESMAS vars do service db: sobrescrever POSTGRES_USER/PASSWORD/DB
+      # (ex.: volume já existente) não quebra o web→db silenciosamente (GATE 1 ③-C D1).
+      DATABASE_URL: postgresql://${POSTGRES_USER:-patrimonio}:${POSTGRES_PASSWORD:-patrimonio}@db:5432/${POSTGRES_DB:-patrimonio}?schema=public
+      # Sessão: defina via env em produção (ex.: SESSION_SECRET=$(openssl rand -hex 32) docker compose up -d)
+      SESSION_SECRET: ${SESSION_SECRET:-troque-por-um-segredo-longo-e-aleatorio}
+      # Autenticação: mock em dev; ldaps no ⑧ (descomentar os envs e o volume do CA)
+      #IPA_MODE: ${IPA_MODE:-mock}
+      IPA_MODE: ${IPA_MODE:-ldaps}
+      # Seed de demonstração no boot (0 = off): SEED_ON_BOOT=1 docker compose up -d
+      SEED_ON_BOOT: ${SEED_ON_BOOT:-0}
+      # FreeIPA (CPTEC/INPE):
+      IPA_LDAPS_URL: ${IPA_LDAPS_URL:-ldaps://ipa.cptec.inpe.br:636}
+      IPA_BASE_DN: ${IPA_BASE_DN:-cn=users,cn=accounts,dc=cptec,dc=inpe,dc=br}
+      IPA_CA_CERT: ${IPA_CA_CERT:-/run/secrets/freeipa_chave_operacional.pem}
+    volumes:
+      - ./secrets/freeipa_chave_operacional.pem:/run/secrets/freeipa_chave_operacional.pem:ro
+
 volumes:
   patrimonio_pgdata:

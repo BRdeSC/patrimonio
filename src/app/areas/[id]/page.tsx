@@ -28,7 +28,7 @@ export default async function AreaPage({ params }: { params: Promise<{ id: strin
 
   return (
     <main className="flex-1 p-6">
-      <div className="mx-auto max-w-5xl">
+      <div className="mx-auto w-full px-4 lg:w-4/5">
         <AreaHeader
           nomeArea={area.nome}
           papel={area.papel}

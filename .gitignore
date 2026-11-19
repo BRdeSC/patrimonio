@@ -28,6 +28,7 @@ yarn-error.log*
 # Builds (complemento)
 /build
 *.pem
+secrets/
 
 # Vercel (deploy eventual)
 .vercel

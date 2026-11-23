@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState, type DragEvent, type FormEvent } from "react";
 import { BASE_PATH } from "@/lib/base-path";
+import { DetentorCombobox } from "@/components/DetentorCombobox";
 
 type Patrimonio = {
   id: number;
@@ -983,7 +984,7 @@ export function PatrimoniosPanel({
               valor={form.responsavel}
               onChange={(v) => setForm((f) => ({ ...f, responsavel: v }))}
             />
-            <CampoForm
+            <DetentorCombobox
               id="p-detentor"
               rotulo="Detentor"
               valor={form.detentor}

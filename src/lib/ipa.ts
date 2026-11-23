@@ -12,6 +12,14 @@ export interface IpaIdentity {
 
 export interface IpaProvider {
   authenticate(uid: string, senha: string): Promise<IpaIdentity | null>;
+  listServidores(): Promise<Servidor[]>;
+}
+
+// Servidor do FreeIPA (vinculo title=Servidor) — alimenta o campo Detentor.
+export interface Servidor {
+  uid: string;
+  nome: string;
+  email: string | null;
 }
 
 /**
@@ -70,6 +78,11 @@ export class MockIpaProvider implements IpaProvider {
       email: user.email,
       dn: `uid=${user.uid},ou=people,dc=exemplo,dc=com,dc=br`,
     };
+  }
+
+  // Mock: devolve os users fixos como "servidores" (testar o combobox em dev).
+  async listServidores(): Promise<Servidor[]> {
+    return MOCK_USERS.map((u) => ({ uid: u.uid, nome: u.nome, email: u.email }));
   }
 }
 
@@ -132,6 +145,42 @@ export class LdapsIpaProvider implements IpaProvider {
       return { uid, nome, email, dn: userDn };
     } catch {
       return null; // credenciais inválidas, rede, certificado... -> genérico
+    } finally {
+      if (client) {
+        await client.unbind().catch(() => undefined);
+      }
+    }
+  }
+
+  // Lista os servidores (title=Servidor) do IPA para o campo Detentor.
+  // Consulta ANONIMA (sem senha) — o FreeIPA expoe cn/mail/uid de forma public.
+  // Falha de rede/cert -> [] (o form so desabilita a sugestao; nao quebra o cadastro).
+  async listServidores(): Promise<Servidor[]> {
+    let client: Client | null = null;
+    try {
+      const tlsOptions: ConnectionOptions = {};
+      if (this.caCert) {
+        tlsOptions.ca = readFileSync(this.caCert);
+      }
+      client = new Client({ url: this.url, timeout: 10_000, tlsOptions });
+      const result = await client.search(this.baseDn, {
+        scope: "sub",
+        filter: "(&(objectClass=inetUser)(title=Servidor))",
+        attributes: ["uid", "cn", "mail"],
+        sizeLimit: 1000,
+      });
+      const out: Servidor[] = [];
+      for (const e of result.searchEntries) {
+        const uid = firstAttributeValue(e, "uid");
+        if (!uid) continue;
+        const nome = firstAttributeValue(e, "cn") ?? uid;
+        const email = firstAttributeValue(e, "mail");
+        out.push({ uid, nome, email });
+      }
+      out.sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR"));
+      return out;
+    } catch {
+      return [];
     } finally {
       if (client) {
         await client.unbind().catch(() => undefined);

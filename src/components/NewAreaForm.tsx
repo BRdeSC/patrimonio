@@ -2,6 +2,7 @@
 
 import { useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
+import { BASE_PATH } from "@/lib/base-path";
 
 export function NewAreaForm({ onCriada }: { onCriada?: (areaId: number) => void }) {
   const router = useRouter();
@@ -15,7 +16,7 @@ export function NewAreaForm({ onCriada }: { onCriada?: (areaId: number) => void 
     setErro(null);
     setCarregando(true);
     try {
-      const res = await fetch("/api/areas", {
+      const res = await fetch(`${BASE_PATH}/api/areas`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ nome, descricao: descricao || undefined }),

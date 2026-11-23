@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, type FormEvent } from "react";
+import { BASE_PATH } from "@/lib/base-path";
 
 type Membro = {
   uid: string;
@@ -24,7 +25,7 @@ export function MembersPanel({ areaId }: { areaId: number }) {
   const [msg, setMsg] = useState<string | null>(null);
   const [ocupado, setOcupado] = useState(false);
 
-  const base = `/api/areas/${areaId}/members`;
+  const base = `${BASE_PATH}/api/areas/${areaId}/members`;
 
   // Recarrega a lista após mutações (chamado a partir de handlers de evento).
   async function recarregar() {

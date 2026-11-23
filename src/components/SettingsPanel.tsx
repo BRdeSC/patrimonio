@@ -2,6 +2,7 @@
 
 import { useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
+import { BASE_PATH } from "@/lib/base-path";
 
 // Configurações da área (OWNER): nome, descrição, visibilidade + excluir (hard).
 export function SettingsPanel({
@@ -29,7 +30,7 @@ export function SettingsPanel({
     setMsg(null);
     setOcupado(true);
     try {
-      const res = await fetch(`/api/areas/${areaId}`, {
+      const res = await fetch(`${BASE_PATH}/api/areas/${areaId}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ nome, descricao: descricao || null, visibilidade }),
@@ -58,7 +59,7 @@ export function SettingsPanel({
     setErro(null);
     setOcupado(true);
     try {
-      const res = await fetch(`/api/areas/${areaId}`, { method: "DELETE" });
+      const res = await fetch(`${BASE_PATH}/api/areas/${areaId}`, { method: "DELETE" });
       if (!res.ok) {
         const data = (await res.json().catch(() => null)) as { erro?: string } | null;
         setErro(data?.erro ?? `Erro ${res.status}`);

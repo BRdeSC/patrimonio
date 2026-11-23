@@ -1,5 +1,6 @@
 import { createHmac, randomBytes } from "node:crypto";
 import type { SessionUser } from "@/lib/types";
+import { BASE_PATH } from "./base-path";
 import { prisma } from "./prisma";
 
 // Sessão: token aleatório no cookie, hash (HMAC-SHA256 com SESSION_SECRET)
@@ -38,8 +39,11 @@ export function buildSetCookie(token: string | null): string {
   const parts: string[] = [
     token
       ? `${SESSION_COOKIE}=${encodeURIComponent(token)}`
+      // Delete: Path=/ (raiz) limpa cookies definidos em subpath (Path=/patrimonio).
       : `${SESSION_COOKIE}=; Max-Age=0; Path=/`,
-    "Path=/",
+    // Sessão escopada ao subpath do app (compartilha de host → cookie não vaza
+    // para outros paths). Sem subpath = Path=/ (comportamento anterior).
+    `Path=${BASE_PATH || "/"}`,
     "HttpOnly",
     "SameSite=Strict",
   ];

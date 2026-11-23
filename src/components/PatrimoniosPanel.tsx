@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState, type DragEvent, type FormEvent } from "react";
+import { BASE_PATH } from "@/lib/base-path";
 
 type Patrimonio = {
   id: number;
@@ -176,7 +177,7 @@ export function PatrimoniosPanel({
   papel: string | null;
 }) {
   const podeEditar = papel === "OWNER" || papel === "OPERATOR";
-  const base = `/api/areas/${areaId}/patrimonios`;
+  const base = `${BASE_PATH}/api/areas/${areaId}/patrimonios`;
   // Capa (1ª foto) — URL inalterada; a tabela usa esta thumb.
   const fotoUrl = (id: number) => `${base}/${id}/foto`;
   // Galeria / foto individual.

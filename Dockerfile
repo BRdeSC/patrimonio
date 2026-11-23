@@ -14,15 +14,21 @@ RUN npm ci
 # ---- Stage 2: build — build de produção (output: "standalone" no next.config.ts) ----
 FROM node:20-slim AS build
 WORKDIR /app
+# Subpath de deploy (ex.: /patrimonio) — build-time: inlinado nos assets client.
+# docker build --build-arg NEXT_PUBLIC_BASE_PATH=/patrimonio
+ARG NEXT_PUBLIC_BASE_PATH=""
+ENV NEXT_PUBLIC_BASE_PATH=${NEXT_PUBLIC_BASE_PATH}
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 RUN npm run build
 
 # ---- Stage 3: runner — runtime (usuário não-root, padrão do standalone Next) ----
 FROM node:20-slim AS runner
+ARG NEXT_PUBLIC_BASE_PATH=""
 ENV NODE_ENV=production \
     PORT=3000 \
-    HOSTNAME=0.0.0.0
+    HOSTNAME=0.0.0.0 \
+    NEXT_PUBLIC_BASE_PATH=${NEXT_PUBLIC_BASE_PATH}
 WORKDIR /app
 # libssl para o engine do Prisma detectar o OpenSSL do sistema (sem isso, warning
 # "failed to detect libssl" no boot — GATE 2 ③-C D1).
@@ -49,7 +55,8 @@ EXPOSE 3000
 USER node
 
 # Healthcheck: aceita qualquer status < 400 na raiz (ex.: redirect p/ /login).
+# Respeita o subpath (basePath) quando setado no build.
 HEALTHCHECK --interval=30s --timeout=5s --start-period=30s --retries=3 \
-    CMD node -e "fetch('http://127.0.0.1:3000/').then((r) => process.exit(r.status < 400 ? 0 : 1)).catch(() => process.exit(1))"
+    CMD node -e "fetch('http://127.0.0.1:3000' + (process.env.NEXT_PUBLIC_BASE_PATH || '') + '/').then((r) => process.exit(r.status < 400 ? 0 : 1)).catch(() => process.exit(1))"
 
 ENTRYPOINT ["./docker-entrypoint.sh"]

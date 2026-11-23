@@ -60,6 +60,24 @@ npm run dev                   # http://localhost:3000
 
 > `outro.area` serve para validar isolamento de tenant (não vê a área COIDS, que é privada).
 
+## Rodando sob subpath (ex.: `/patrimonio`)
+
+Para servir o app atrás de um subpath (ex.: `https://host/patrimonio`, num
+reverse proxy que hospeda mais apps no mesmo domínio), defina:
+
+```bash
+NEXT_PUBLIC_BASE_PATH="/patrimonio"
+```
+
+- **É build-time**: o valor é inlinado no bundle client. Em dev, lido do `.env`
+  (reiniciar o `npm run dev` após mudar). No Docker, o compose passa como ARG de
+  build (lendo o MESMO `.env`): `docker compose up -d --build` →
+  `http://localhost:3100/patrimonio`.
+- Rotas, assets, `next/link` e o cookie de sessão (`Path=/patrimonio`) ficam
+  escopados ao subpath automaticamente; as chamadas internas (`fetch` de API)
+  já levam o prefixo. O reverse proxy passa o path **como está — sem rewrite**.
+- Vazio (`""`) mantém o app na raiz.
+
 ## Variáveis de ambiente
 
 | Variável              | Descrição                                                            |
@@ -71,6 +89,7 @@ npm run dev                   # http://localhost:3000
 | `IPA_BASE_DN`         | **Base DN dos usuários** (na FreeIPA: `cn=users,cn=accounts,dc=...,dc=...`) — obrigatório com `IPA_MODE=ldaps` |
 | `IPA_CA_CERT`         | Caminho do arquivo com o certificado CA da FreeIPA (verificação TLS) |
 | `NEXT_PUBLIC_APP_URL` | URL pública do app (em http local não aplica `Secure` no cookie; em produção tratar via variável server-side) |
+| `NEXT_PUBLIC_BASE_PATH` | Subpath sob o qual o app é servido (ex.: `/patrimonio`). Vazio = raiz. **Build-time** |
 | `SEED_ON_BOOT`        | Docker: `1` semeia o demo no boot (default `0`)                      |
 | `POSTGRES_PORT`       | Docker: porta externa do Postgres (default `5432`)                   |
 

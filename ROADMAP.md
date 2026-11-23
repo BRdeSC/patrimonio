@@ -37,7 +37,7 @@ Inicia atendendo a área **COIDS** e é projetada para se tornar produto geral (
 - [x] **③ CRUD de Patrimônios** — schemas Zod; API list/create/read/update/delete; busca + filtros; forms; upload de foto (BLOB); UI (aba "Patrimônios"). ✅
 - [x] **③-A Hub & Áreas Públicas** — hub "Minhas Áreas", leitura pública opt-in, modo escuro (next-themes). ✅
 - [x] **③-B UX & Papéis (pedidos do dono)** — D1–D9: ajustes UX, ordenação da lista, "Atualizado por" (detalhe + resposta PATCH + busca ao abrir), detalhe=read-only / editar=gestão de fotos (ops registram o operador), alinhamento da galeria, capa servida com no-cache. ✅ (92 testes, 9 gates)
-- [ ] **③-C Docker full-stack** — Dockerfile (multi-stage, `output: standalone` já configurado), entrypoint c/ `prisma db push` idempotente + seed opcional, `.dockerignore`, service `web` no compose (porta 3100, sem conflito c/ dev), mount opcional da CA FreeIPA (cabe ao ⑧). ⏳
+- [x] **③-C Docker full-stack** — Dockerfile (multi-stage, `output: standalone` já configurado), entrypoint c/ `prisma db push` idempotente + seed opcional, `.dockerignore`, service `web` no compose (porta 3100, sem conflito c/ dev), mount CA FreeIPA. ✅
 - [ ] **④ Movimentações / Histórico** — registrar trocas de detentor/localização; timeline no detalhe; KPI de pendências.
 - [ ] **⑤ Hardening** — headers (CSP/HSTS/nosniff); rate limiting de produção (login + criação de área); revisita anti-IDOR; serving de foto seguro; gestão de segredos.
 - [ ] **⑥ Testes** — unit (Zod, isolamento tenant) + integração (CRUD, permissões, IDOR negativo) + suíte de abuso.
@@ -63,7 +63,7 @@ Inicia atendendo a área **COIDS** e é projetada para se tornar produto geral (
 | ③ CRUD + Foto | ✅ (92 testes) | ✅ (2×) | ✅ (2×) |
 | ③-A Hub & Áreas Públicas | ✅ | ✅ | ✅ |
 | ③-B UX & Papéis (D1–D9) | ✅ | ✅ | ✅ |
-| ③-C Docker full-stack | ⏳ Dev | ⬜ | ⬜ |
+| ③-C Docker full-stack | ✅ | ✅ | ✅ |
 | ④ Movimentações | ⬜ | ⬜ | ⬜ |
 | ⑤ Hardening | ⬜ | ⬜ | ⬜ |
 | ⑥ Testes | ⬜ | — | ⬜ |

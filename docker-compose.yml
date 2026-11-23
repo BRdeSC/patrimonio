@@ -23,7 +23,13 @@ services:
   # App inteiro em 1 container stateless (1 imagem). Schema aplicado no boot
   # (entrypoint: prisma db push idempotente; SEED_ON_BOOT=1 semeia o demo).
   web:
-    build: .
+    build:
+      context: .
+      # Subpath de deploy (ex.: /patrimonio) — build-time (inlinado nos assets).
+      # O compose lê o .env automaticamente: o MESMO NEXT_PUBLIC_BASE_PATH do
+      # dev define o path do build (vazio = raiz).
+      args:
+        NEXT_PUBLIC_BASE_PATH: ${NEXT_PUBLIC_BASE_PATH:-}
     container_name: patrimonio-web
     restart: unless-stopped
     # "3100:3000" evita conflito com `npm run dev` local (porta 3000).

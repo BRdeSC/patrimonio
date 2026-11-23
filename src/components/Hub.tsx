@@ -5,6 +5,7 @@ import { PapelBadge } from "./PapelBadge";
 import { NewAreaForm } from "./NewAreaForm";
 import { PublicAreasSection } from "./PublicAreasSection";
 import type { AreaResumo } from "@/lib/types";
+import Link from 'next/link';
 
 // Hub "Minhas Áreas": cards com nome, papel, itens e data de criação,
 // seguido da seção de descoberta de áreas públicas (pacote ③-A).
@@ -45,7 +46,7 @@ export function Hub({
         <ul className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {areas.map((area) => (
             <li key={area.id}>
-              <a
+              <Link
                 href={`/areas/${area.id}`}
                 className="block h-full rounded-xl border border-zinc-200 bg-white p-5 shadow-sm transition hover:border-violet-400 dark:border-zinc-800 dark:bg-zinc-900 dark:hover:border-violet-500"
               >
@@ -57,7 +58,7 @@ export function Hub({
                 <p className="mt-1 text-xs text-zinc-400">
                   Criada em {new Date(area.criadaEm).toLocaleDateString("pt-BR")}
                 </p>
-              </a>
+              </Link>
             </li>
           ))}
         </ul>

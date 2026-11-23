@@ -659,7 +659,7 @@ export function PatrimoniosPanel({
                   type="text"
                   value={busca}
                   onChange={(e) => setBusca(e.target.value)}
-                  placeholder="nº, descrição, marca…"
+                  placeholder="patrimônio, descrição, marca…"
                   className={INPUT}
                 />
               </div>
@@ -753,7 +753,7 @@ export function PatrimoniosPanel({
               <table className="w-full text-left text-sm">
                 <thead>
                   <tr className="border-b border-zinc-200 text-xs uppercase tracking-wide text-zinc-500 dark:border-zinc-800">
-                    {thOrdem("numero", "Nº")}
+                    {thOrdem("numero", "Patrimônio")}
                     {thOrdem("descricao", "Descrição")}
                     {thOrdem("marca", "Marca/Modelo")}
                     {thOrdem("detentor", "Detentor")}
@@ -904,7 +904,7 @@ export function PatrimoniosPanel({
               </div>
             )}
             <dl className="grid grid-cols-1 gap-x-6 gap-y-3 sm:grid-cols-2">
-              <Campo rotulo="Número" valor={view.item.numero} />
+              <Campo rotulo="Patrimônio" valor={view.item.numero} />
               <Campo rotulo="Descrição" valor={view.item.descricao} />
               <Campo rotulo="Marca" valor={view.item.marca} />
               <Campo rotulo="Modelo" valor={view.item.modelo} />
@@ -947,7 +947,7 @@ export function PatrimoniosPanel({
           <div className={`${CARD} grid grid-cols-1 gap-4 sm:grid-cols-2`}>
             <CampoForm
               id="p-numero"
-              rotulo="Número"
+              rotulo="Patrimônio"
               obrigatorio
               valor={form.numero}
               onChange={(v) => setForm((f) => ({ ...f, numero: v }))}

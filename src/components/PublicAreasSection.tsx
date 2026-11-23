@@ -1,5 +1,6 @@
 import { PapelBadge } from "./PapelBadge";
 import type { AreaResumo } from "@/lib/types";
+import Link from 'next/link';
 
 // Seção "Áreas públicas" (pacote ③-A): descoberta das áreas publica_leitura
 // em que o usuário não é membro. Cards no mesmo estilo do hub; PapelBadge
@@ -16,7 +17,7 @@ export function PublicAreasSection({ publicas }: { publicas: AreaResumo[] }) {
       <ul className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {publicas.map((area) => (
           <li key={area.id}>
-            <a
+            <Link
               href={`/areas/${area.id}`}
               className="block h-full rounded-xl border border-zinc-200 bg-white p-5 shadow-sm transition hover:border-violet-400 dark:border-zinc-800 dark:bg-zinc-900 dark:hover:border-violet-500"
             >
@@ -28,7 +29,7 @@ export function PublicAreasSection({ publicas }: { publicas: AreaResumo[] }) {
               <p className="mt-1 text-xs text-zinc-400">
                 Criada em {new Date(area.criadaEm).toLocaleDateString("pt-BR")}
               </p>
-            </a>
+            </Link>
           </li>
         ))}
       </ul>

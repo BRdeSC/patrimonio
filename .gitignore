@@ -48,3 +48,6 @@ next-env.d.ts
 
 # Precaução: arquivos de upload locais (MVP usa BLOB no Postgres)
 uploads/
+
+# BD
+patrimonio_pgdata/

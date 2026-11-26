@@ -53,6 +53,13 @@ export const listPatrimoniosQuerySchema = z.object({
     .enum(["numero", "descricao", "marca", "detentor", "localizacao", "atualizadoEm"])
     .optional(),
   dir: z.enum(["asc", "desc"]).optional(),
+  // Paginação server-side (③-E): page ≥ 1 (default 1); limit = allowlist de
+  // tamanhos de página ou "todos" (sem limite — comportamento antigo).
+  // Valor fora da allowlist → 400 "Parâmetros inválidos", como os demais
+  // params. /exportar reusa o MESMO schema, mas o PDF ignora esses campos
+  // (sempre exporta a totalidade do filtro ativo).
+  page: z.coerce.number().int().min(1).default(1),
+  limit: z.enum(["10", "20", "50", "100", "todos"]).default("10"),
 });
 
 export type ListPatrimoniosQuery = z.infer<typeof listPatrimoniosQuerySchema>;

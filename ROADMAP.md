@@ -38,7 +38,8 @@ Inicia atendendo a área **COIDS** e é projetada para se tornar produto geral (
 - [x] **③-A Hub & Áreas Públicas** — hub "Minhas Áreas", leitura pública opt-in, modo escuro (next-themes). ✅
 - [x] **③-B UX & Papéis (pedidos do dono)** — D1–D9: ajustes UX, ordenação da lista, "Atualizado por" (detalhe + resposta PATCH + busca ao abrir), detalhe=read-only / editar=gestão de fotos (ops registram o operador), alinhamento da galeria, capa servida com no-cache. ✅ (92 testes, 9 gates)
 - [x] **③-C Docker full-stack** — Dockerfile (multi-stage, `output: standalone` já configurado), entrypoint c/ `prisma db push` idempotente + seed opcional, `.dockerignore`, service `web` no compose (porta 3100, sem conflito c/ dev), mount CA FreeIPA. ✅
-- [ ] **③-D Export PDF** — exportar a lista de patrimônios em PDF (rota GET `/patrimonios/exportar` c/ pdfkit; paridade de busca/ordem c/ a lista; botão "Exportar PDF" no painel). ⏳ Dev ③-D ✅ (96/96) → D.1 ✅ (5 colunas + wrap, bbox sem estouro) → **D.2** em Basalto: spec final do dono (A4 retrato, 6 colunas fixas em mm, 8.5pt, padding 2mm, zebra).
+- [x] **③-D Export PDF** — exportar a lista de patrimônios em PDF (rota GET `/patrimonios/exportar` c/ pdfkit; paridade de busca/ordem c/ a lista; botão "Exportar PDF" no painel). ✅ **ENCERRADO (dono: release 42825b5 em develop)** — D.0 ✅ (96/96) · D.1 ✅ (5 colunas + wrap, bbox 0) · D.2 ✅ Basalto (A4 retrato, 6 colunas fixas em mm, 8.5pt, padding 2mm, zebra) · D.3 ✅ Maestro (takeover documentado: "Atualizado em" só data dd/mm/aaaa + Descrição 45mm / Atualizado 22mm — resolveu a discrepância do D.2). Gates: GATE 1 stale (desvio documentado) + GATE 2 não executado — dono testou ao vivo e lançou (decisão do dono).
+- [ ] **③-E Paginação da listagem** — paginação server-side em `GET /patrimonios` (`page` + `limit` 10|20|50|100|todos; resposta `{itens, total, page}`) + footer no painel (select itens/página, "Mostrando X–Y de Z itens", Anterior/Próxima, reset p/ página 1 a cada filtro/ordenação) + Exportar PDF enviando os filtros ativos (PDF ignora paginação). ✅ **MAESTRO (takeover documentado — 3º freeze do Dev, 26/11):** paginação server-side (`page`/`limit` no schema Zod — inválido → 400; total = count do MESMO where; `todos` = sem limite, retrocompatível; resposta `{patrimonios, total, page}`) + footer no painel (select 10/20/50/100/Todos, "Mostrando X–Y de Z itens", ← Anterior / "Página X de Y" / Próxima →, reset page=1 a cada filtro/ordenação) + Exportar PDF inalterado (envia só filtros ativos — PDF ignora paginação) + bloco (o) na suíte. Self-gates: type-check 0 · lint 0 · 97/97 · build · live 3130 matriz 100% + cleanup. GATES 1+2 a seguir (abas fixas, sessões novas).
 - [ ] **④ Movimentações / Histórico** — registrar trocas de detentor/localização; timeline no detalhe; KPI de pendências.
 - [ ] **⑤ Hardening** — headers (CSP/HSTS/nosniff); rate limiting de produção (login + criação de área); revisita anti-IDOR; serving de foto seguro; gestão de segredos.
 - [ ] **⑥ Testes** — unit (Zod, isolamento tenant) + integração (CRUD, permissões, IDOR negativo) + suíte de abuso.
@@ -65,7 +66,8 @@ Inicia atendendo a área **COIDS** e é projetada para se tornar produto geral (
 | ③-A Hub & Áreas Públicas | ✅ | ✅ | ✅ |
 | ③-B UX & Papéis (D1–D9) | ✅ | ✅ | ✅ |
 | ③-C Docker full-stack | ✅ | ✅ | ✅ |
-| ③-D Export PDF | ⏳ | ⬜ | ⬜ |
+| ③-D Export PDF | ✅ (release 42825b5) | ⚠️ GATE 1 stale (desvio) — dono encerrou c/ release | — (dono testou live) |
+| ③-E Paginação (dono, 26/11) | ✅ MAESTRO (takeover — 3º freeze) | ⬜ | ⬜ |
 | ④ Movimentações | ⬜ | ⬜ | ⬜ |
 | ⑤ Hardening | ⬜ | ⬜ | ⬜ |
 | ⑥ Testes | ⬜ | — | ⬜ |

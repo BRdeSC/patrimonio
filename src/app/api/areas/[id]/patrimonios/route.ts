@@ -1,4 +1,4 @@
-import { Prisma, type Patrimonio } from "@prisma/client";
+import { type Patrimonio } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { getAreaContext, canReadArea, canEditPatrimonio } from "@/lib/access";
 import { getSessionUser } from "@/lib/session";
@@ -11,6 +11,8 @@ import {
   patrimonioResumo,
   SELECT_RESUMO,
   isUniqueViolation,
+  orderByLista,
+  whereLista,
 } from "@/lib/patrimonio";
 import type { AreaDetalhe, SessionUser } from "@/lib/types";
 
@@ -37,47 +39,9 @@ async function resolve(request: Request, ctx: Ctx): Promise<Resolved> {
   return { user, area } as const;
 }
 
-// Ordenação da listagem (D6): allowlist via zod → zero injeção de coluna.
-// Prisma (esta versão): orderBy = ARRAY de objetos de CHAVE ÚNICA, na ordem
-// de sorteio. Objeto com 2+ chaves — solto ou dentro do array — é rejeitado
-// na validação de runtime (diagnosticado empiricamente; bug live no sort de
-// "Marca/Modelo" reportado pelo dono).
-// "marca" leva tiebreak por "modelo" (a coluna exibida é "Marca/Modelo").
-// A chave final id asc é sempre presente (determinístico; numero já é único
-// por área, então o padrão de hoje não muda). Nulls (detentor/localizacao):
-// default do Postgres — asc → nulos por último, desc → nulos primeiro.
-type ColOrdenacao =
-  | "numero"
-  | "descricao"
-  | "marca"
-  | "detentor"
-  | "localizacao"
-  | "atualizadoEm";
-
-function ordemLista(
-  col: ColOrdenacao | undefined,
-  dir: "asc" | "desc" | undefined,
-): Prisma.PatrimonioOrderByWithRelationInput[] {
-  if (!col) return [{ numero: "asc" }, { id: "asc" }];
-  const d = dir ?? "asc";
-  switch (col) {
-    case "numero":
-      return [{ numero: d }, { id: "asc" }];
-    case "descricao":
-      return [{ descricao: d }, { id: "asc" }];
-    case "marca":
-      return [{ marca: d }, { modelo: d }, { id: "asc" }];
-    case "detentor":
-      return [{ detentor: d }, { id: "asc" }];
-    case "localizacao":
-      return [{ localizacao: d }, { id: "asc" }];
-    case "atualizadoEm":
-      return [{ atualizadoEm: d }, { id: "asc" }];
-  }
-}
-
 // Lista (membro/leitor): busca q + filtros detentor/localizacao/pendente.
 // NUNCA o BLOB — apenas o flag temFoto.
+// where/orderBy em lib/patrimonio (compartilhado c/ /exportar — paridade ③-D).
 export async function GET(request: Request, ctx: Ctx) {
   const resolved = await resolve(request, ctx);
   if ("error" in resolved) return resolved.error;
@@ -99,34 +63,10 @@ export async function GET(request: Request, ctx: Ctx) {
   if (!parsed.success) {
     return Response.json({ erro: "Parâmetros inválidos" }, { status: 400 });
   }
-  const { q, detentor, localizacao, pendente, col, dir } = parsed.data;
-
-  const where: Prisma.PatrimonioWhereInput = { areaId: area.id };
-  if (q) {
-    const like = { contains: q, mode: "insensitive" as const };
-    where.OR = [
-      { numero: like },
-      { descricao: like },
-      { marca: like },
-      { modelo: like },
-      { serie: like },
-    ];
-  }
-  // Busca parcial (pedido 8): contains + insensitive, igual ao "q".
-  if (detentor) where.detentor = { contains: detentor, mode: "insensitive" };
-  if (localizacao) where.localizacao = { contains: localizacao, mode: "insensitive" };
-  const pendencias: Prisma.PatrimonioWhereInput[] = [];
-  if (pendente === "detentor" || pendente === "ambos") {
-    pendencias.push({ OR: [{ detentor: null }, { detentor: "" }] });
-  }
-  if (pendente === "localizacao" || pendente === "ambos") {
-    pendencias.push({ OR: [{ localizacao: null }, { localizacao: "" }] });
-  }
-  if (pendencias.length > 0) where.AND = pendencias;
 
   const itens = await prisma.patrimonio.findMany({
-    where,
-    orderBy: ordemLista(col, dir),
+    where: whereLista(area.id, parsed.data),
+    orderBy: orderByLista(parsed.data.col, parsed.data.dir),
     select: SELECT_RESUMO,
   });
   return Response.json({ patrimonios: itens.map(patrimonioResumo) });

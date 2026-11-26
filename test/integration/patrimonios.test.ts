@@ -1333,8 +1333,10 @@ describe("CRUD de patrimônios + foto (multi-tenant, RBAC, BLOB)", () => {
     const ok = await exportar(tokens.outro, areaA);
     expect(ok.status).toBe(200);
     expect(ok.headers.get("content-type")).toBe("application/pdf");
+    // E.1: inline (PDF exibido na aba via window.open; salvar = diálogo de
+    // nome do viewer, com o filename como sugestão) — não mais attachment.
     expect(ok.headers.get("content-disposition")).toBe(
-      `attachment; filename="patrimonio-${slugA}.pdf"`,
+      `inline; filename="patrimonio-${slugA}.pdf"`,
     );
     const bytes = new Uint8Array(await ok.arrayBuffer());
     expect(bytes.length).toBeGreaterThan(0);

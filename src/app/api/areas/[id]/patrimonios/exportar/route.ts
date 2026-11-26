@@ -90,10 +90,16 @@ export async function GET(request: Request, ctx: Ctx) {
   // Cópia em ArrayBuffer: BodyInit do TS 5.7+ exige Uint8Array<ArrayBuffer>
   // (mesmo padrão de serveFoto, lib/foto).
   const bytes = new Uint8Array(buffer);
+  // inline (E.1, pedido do dono 26/11): o botão do painel faz window.open →
+  // o browser EXIBE o PDF na nova aba; para baixar, o usuário usa o "Salvar"
+  // do viewer (diálogo de nome: aceita o sugerido ou altera). attachment
+  // descarregava direto p/ a pasta de downloads, sem diálogo (nomes
+  // duplicados viravam "(1)", "(2)", ...). O filename segue presente como
+  // nome sugerido no diálogo de salvar (RFC 6266: advisory no inline).
   return new Response(bytes, {
     headers: {
       "Content-Type": "application/pdf",
-      "Content-Disposition": `attachment; filename="patrimonio-${slug}.pdf"`,
+      "Content-Disposition": `inline; filename="patrimonio-${slug}.pdf"`,
       "Content-Length": String(bytes.byteLength),
     },
   });

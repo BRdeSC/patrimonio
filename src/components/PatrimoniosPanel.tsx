@@ -170,6 +170,10 @@ export type ColOrdenacao =
   | "localizacao"
   | "atualizadoEm";
 
+// ③-E: tamanho de página da listagem ("todos" = sem limite, comportamento
+// antigo — a navegação de página fica oculta nesse modo).
+type TamanhoPagina = "10" | "20" | "50" | "100" | "todos";
+
 // ③-D: params da listagem — compartilhados pelo fetch e pelo "Exportar PDF":
 // o export repassa EXATAMENTE o que está na tela (busca/filtros/ordenação).
 function paramsLista(f: {
@@ -240,6 +244,23 @@ export function PatrimoniosPanel({
   const [ordCol, setOrdCol] = useState<ColOrdenacao | null>(null);
   const [ordDir, setOrdDir] = useState<"asc" | "desc">("asc");
 
+  // Paginação server-side (③-E): página atual, tamanho da página e total do
+  // filtro. "todos" → sem limite (comportamento antigo, navegação oculta).
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState<TamanhoPagina>("10");
+  const [total, setTotal] = useState<number | null>(null);
+
+  // ③-E: QUALQUER mudança de filtro (busca/detentor/localização/pendências)
+  // ou de ordenação volta à página 1. Padrão de "reset no render" (guardado
+  // por filterSig — só dispara na mudança real): o fetch da lista abaixo já
+  // usa a página resetada no mesmo ciclo, sem fetch obsoleto.
+  const filterSig = [deb.q, deb.det, deb.loc, semDet, semLoc, ordCol, ordDir].join("\u0000");
+  const [prevFilterSig, setPrevFilterSig] = useState(filterSig);
+  if (filterSig !== prevFilterSig) {
+    setPrevFilterSig(filterSig);
+    setPage(1);
+  }
+
   // ESC fecha o lightbox (listener removido no cleanup).
   useEffect(() => {
     if (!fotoAmpliada) return;
@@ -291,16 +312,22 @@ export function PatrimoniosPanel({
       semLoc,
       col: ordCol,
       dir: ordDir,
-    }).toString();
-    fetch(`${base}${qs ? `?${qs}` : ""}`)
+    });
+    // ③-E: paginação server-side (limit="todos" → sem limite). SÓ a lista
+    // envia page/limit — o "Exportar PDF" (exportarPdf) monta URL própria,
+    // então o PDF continua exportando a totalidade do filtro ativo.
+    qs.set("page", String(page));
+    qs.set("limit", pageSize);
+    fetch(`${base}?${qs.toString()}`)
       .then(async (res) => {
         if (!ativo) return;
         if (!res.ok) {
           setErroLista(await lerErro(res));
           return;
         }
-        const data = (await res.json()) as { patrimonios: Patrimonio[] };
+        const data = (await res.json()) as { patrimonios: Patrimonio[]; total: number };
         setItens(data.patrimonios);
+        setTotal(data.total);
       })
       .catch(() => {
         if (ativo) setErroLista("Falha ao carregar patrimônios.");
@@ -308,7 +335,7 @@ export function PatrimoniosPanel({
     return () => {
       ativo = false;
     };
-  }, [base, deb, semDet, semLoc, versao, ordCol, ordDir]);
+  }, [base, deb, semDet, semLoc, versao, ordCol, ordDir, page, pageSize]);
 
   const pend = useMemo(() => {
     if (!itens) return null;
@@ -319,6 +346,13 @@ export function PatrimoniosPanel({
   }, [itens]);
 
   const temFiltro = Boolean(busca || detF || locF || semDet || semLoc);
+
+  // ③-E: derivadas do rodapé de paginação ("Mostrando X–Y de Z" + Página X de Y).
+  const totalSeguro = total ?? 0;
+  const tamanhoNum = pageSize === "todos" ? Math.max(totalSeguro, 1) : Number(pageSize);
+  const pageCount = Math.max(1, Math.ceil(totalSeguro / tamanhoNum));
+  const inicio = totalSeguro === 0 ? 0 : (page - 1) * tamanhoNum + 1;
+  const fim = Math.min(page * tamanhoNum, totalSeguro);
 
   // Cabeçalho ordenável (D6): coluna nova → asc; coluna ativa → alterna direção.
   function aoOrdenar(col: ColOrdenacao) {
@@ -855,6 +889,59 @@ export function PatrimoniosPanel({
               </table>
             </div>
           )}
+          {/* ③-E: rodapé de paginação — MESMO padrão visual do painel.
+              "Todos" → navegação de página oculta (comportamento antigo). */}
+          {!erroLista && itens !== null && itens.length > 0 && (
+            <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
+              <label
+                htmlFor="tamanho-pagina"
+                className="flex items-center gap-2 text-xs text-zinc-600 dark:text-zinc-400"
+              >
+                Itens por página
+                <select
+                  id="tamanho-pagina"
+                  value={pageSize}
+                  onChange={(e) => {
+                    setPageSize(e.target.value as TamanhoPagina);
+                    setPage(1); // tamanho novo → volta à 1ª página
+                  }}
+                  className="rounded-lg border border-zinc-300 bg-white px-2 py-1 text-xs dark:border-zinc-700 dark:bg-zinc-800"
+                >
+                  <option value="10">10</option>
+                  <option value="20">20</option>
+                  <option value="50">50</option>
+                  <option value="100">100</option>
+                  <option value="todos">Todos</option>
+                </select>
+              </label>
+              <span className="text-xs text-zinc-500">
+                Mostrando {inicio}–{fim} de {totalSeguro} itens
+              </span>
+              {pageSize !== "todos" && (
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    className={BOTAO}
+                    disabled={page <= 1}
+                    onClick={() => setPage((p) => Math.max(1, p - 1))}
+                  >
+                    ← Anterior
+                  </button>
+                  <span className="text-xs text-zinc-500">
+                    Página {page} de {pageCount}
+                  </span>
+                  <button
+                    type="button"
+                    className={BOTAO}
+                    disabled={page >= pageCount}
+                    onClick={() => setPage((p) => Math.min(pageCount, p + 1))}
+                  >
+                    Próxima →
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
         </>
       )}
 
@@ -1123,7 +1210,7 @@ export function PatrimoniosPanel({
                   ))}
                 </div>
               )}
-              <label className={`${BOTAO} mt-5 cursor-pointer`}>
+              <label className={`${BOTAO} mt-3 inline-block cursor-pointer`}>
                 Adicionar fotos
                 <input
                   type="file"

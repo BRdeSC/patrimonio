@@ -1374,4 +1374,117 @@ describe("CRUD de patrimônios + foto (multi-tenant, RBAC, BLOB)", () => {
     );
     expect(del.status).toBe(200);
   });
+
+  // ----------------------------------------------- (o) paginação da lista (③-E)
+  it("(o) paginação: page/limit server-side, total do filtro, 400, todos, export ignora page/limit", async () => {
+    // Token PAG-<SUFFIX>-: único por run (o banco de teste NÃO é zerado entre
+    // runs — ver ensureTestDatabase) e isolado dos dados dos demais blocos.
+    const N = 12;
+    for (let i = 1; i <= N; i++) {
+      const numero = `PAG-${SUFFIX}-${String(i).padStart(2, "0")}`;
+      await criarPatrimonio(areaA, tokens.secretaria, {
+        numero,
+        descricao: `item de paginacao ${i}`,
+      });
+    }
+
+    const lista = async (qs: string) => {
+      const res = await call(
+        patListGET,
+        "GET",
+        `/api/areas/${areaA}/patrimonios${qs}`,
+        { cookie: tokens.secretaria },
+        { id: String(areaA) },
+      );
+      expect(res.status).toBe(200);
+      return (await res.json()) as {
+        patrimonios: { id: number; numero: string }[];
+        total: number;
+        page: number;
+      };
+    };
+
+    // Padrão (sem params): page 1, limit 10; total = count do MESMO filtro.
+    const def = await lista(`?q=PAG-${SUFFIX}-`);
+    expect(def.page).toBe(1);
+    expect(def.total).toBe(N);
+    expect(def.patrimonios).toHaveLength(10);
+
+    // limit=20 → os 12 inteiros (12 < 20); total inalterado.
+    const l20 = await lista(`?q=PAG-${SUFFIX}-&limit=20`);
+    expect(l20.patrimonios).toHaveLength(N);
+    expect(l20.total).toBe(N);
+
+    // Página 2 (limit 10): os 2 finais, na ordem padrão (numero asc).
+    const p2 = await lista(`?q=PAG-${SUFFIX}-&page=2&limit=10`);
+    expect(p2.page).toBe(2);
+    expect(p2.patrimonios.map((p) => p.numero)).toEqual([
+      `PAG-${SUFFIX}-11`,
+      `PAG-${SUFFIX}-12`,
+    ]);
+
+    // Página além da última → fatia vazia, total inalterado (não é erro).
+    const p3 = await lista(`?q=PAG-${SUFFIX}-&page=3&limit=10`);
+    expect(p3.patrimonios).toHaveLength(0);
+    expect(p3.total).toBe(N);
+
+    // limit=todos → sem limite (comportamento pré-paginação).
+    const todos = await lista(`?q=PAG-${SUFFIX}-&limit=todos`);
+    expect(todos.patrimonios).toHaveLength(N);
+    expect(todos.total).toBe(N);
+
+    // total reflete o FILTRO, não a page (q + detentor que não casa com nada).
+    const semMatch = await lista(`?q=PAG-${SUFFIX}-&detentor=nunca-${SUFFIX}`);
+    expect(semMatch.total).toBe(0);
+    expect(semMatch.patrimonios).toHaveLength(0);
+
+    // page/limit fora da allowlist → 400 "Parâmetros inválidos" (como os
+    // demais params — allowlist do zod).
+    for (const qs of [
+      `?q=PAG-${SUFFIX}-&page=0`,
+      `?q=PAG-${SUFFIX}-&page=-1`,
+      `?q=PAG-${SUFFIX}-&page=abc`,
+      `?q=PAG-${SUFFIX}-&limit=7`,
+      `?q=PAG-${SUFFIX}-&limit=xyz`,
+    ]) {
+      const res = await call(
+        patListGET,
+        "GET",
+        `/api/areas/${areaA}/patrimonios${qs}`,
+        { cookie: tokens.secretaria },
+        { id: String(areaA) },
+      );
+      expect(res.status).toBe(400);
+      expect(await res.json()).toEqual({ erro: "Parâmetros inválidos" });
+    }
+
+    // Export ignora page/limit: URL com page=2&limit=10 ainda gera PDF válido
+    // da totalidade do filtro (200 + %PDF — paridade ③-D mantida).
+    const exportar = await call(
+      exportGET,
+      "GET",
+      `/api/areas/${areaA}/patrimonios/exportar?q=PAG-${SUFFIX}-&page=2&limit=10`,
+      { cookie: tokens.outro },
+      { id: String(areaA) },
+    );
+    expect(exportar.status).toBe(200);
+    expect(exportar.headers.get("content-type")).toBe("application/pdf");
+    const bytes = new Uint8Array(await exportar.arrayBuffer());
+    expect(new TextDecoder().decode(bytes.subarray(0, 5))).toBe("%PDF-");
+
+    // Higiene: remove os itens deste bloco (areaA é compartilhada pelos
+    // demais blocos e o banco persiste entre runs).
+    const criados = (await lista(`?q=PAG-${SUFFIX}-&limit=todos`)).patrimonios;
+    expect(criados).toHaveLength(N);
+    for (const p of criados) {
+      const del = await call(
+        patDELETE,
+        "DELETE",
+        `/api/areas/${areaA}/patrimonios/${p.id}`,
+        { cookie: tokens.secretaria },
+        { id: String(areaA), pid: String(p.id) },
+      );
+      expect(del.status).toBe(200);
+    }
+  });
 });

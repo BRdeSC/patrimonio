@@ -59,17 +59,28 @@ export async function GET(request: Request, ctx: Ctx) {
     pendente: query.get("pendente") ?? undefined,
     col: query.get("col") ?? undefined,
     dir: query.get("dir") ?? undefined,
+    // Paginação (③-E): campos aditivos — retrocompatível (quem não envia
+    // recebe page=1/limit=10 e passa a receber total/page no corpo).
+    page: query.get("page") ?? undefined,
+    limit: query.get("limit") ?? undefined,
   });
   if (!parsed.success) {
     return Response.json({ erro: "Parâmetros inválidos" }, { status: 400 });
   }
 
+  // ③-E: fatia (skip/take) + total. O total é o count com o MESMO where da
+  // lista (reflete os filtros, não a page/limit). limit="todos" → sem
+  // skip/take (comportamento pré-paginação).
+  const { page, limit, col, dir, ...filtros } = parsed.data;
+  const where = whereLista(area.id, filtros);
   const itens = await prisma.patrimonio.findMany({
-    where: whereLista(area.id, parsed.data),
-    orderBy: orderByLista(parsed.data.col, parsed.data.dir),
+    where,
+    orderBy: orderByLista(col, dir),
     select: SELECT_RESUMO,
+    ...(limit !== "todos" ? { skip: (page - 1) * Number(limit), take: Number(limit) } : {}),
   });
-  return Response.json({ patrimonios: itens.map(patrimonioResumo) });
+  const total = await prisma.patrimonio.count({ where });
+  return Response.json({ patrimonios: itens.map(patrimonioResumo), total, page });
 }
 
 // Cria (OPERATOR+). Colisão de numero na mesma área → 409 (P2002).

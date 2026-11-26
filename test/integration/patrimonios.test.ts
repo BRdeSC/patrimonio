@@ -4,7 +4,7 @@
 import { beforeAll, describe, expect, it } from "vitest";
 import { POST as loginPOST } from "@/app/api/auth/login/route";
 import { GET as areasGET, POST as areasPOST } from "@/app/api/areas/route";
-import { PATCH as areaPATCH } from "@/app/api/areas/[id]/route";
+import { DELETE as areaDELETE, PATCH as areaPATCH } from "@/app/api/areas/[id]/route";
 import { POST as membersPOST } from "@/app/api/areas/[id]/members/route";
 import {
   DELETE as memberDELETE,
@@ -23,6 +23,8 @@ import {
   GET as fotoFidGET,
 } from "@/app/api/areas/[id]/patrimonios/[pid]/fotos/[fid]/route";
 import { POST as fotosReorderPOST } from "@/app/api/areas/[id]/patrimonios/[pid]/fotos/reordenar/route";
+import { GET as exportGET } from "@/app/api/areas/[id]/patrimonios/exportar/route";
+import { slugify } from "@/lib/slug";
 import { ensureTestDatabase } from "../helpers/test-db";
 import { call, cookieToken } from "../helpers/http";
 
@@ -1299,5 +1301,77 @@ describe("CRUD de patrimônios + foto (multi-tenant, RBAC, BLOB)", () => {
     const upV = await call(fotosPOST, "POST", base, { cookie: tokens.outro, formData: fdV }, params);
     expect(upV.status).toBe(403);
     expect(await upV.json()).toEqual({ erro: "Acesso negado" });
+  });
+
+  // ----------------------------------------------- (n) exportar PDF (③-D)
+  it("(n) exportar PDF: guards 401/404 uniforme, VIEWER 200 + headers + %PDF, paridade de params, 0 itens", async () => {
+    const slugA = slugify(`Patr A ${SUFFIX}`);
+    const exportar = async (cookie: string | undefined, areaId: number, qs = "") =>
+      call(
+        exportGET,
+        "GET",
+        `/api/areas/${areaId}/patrimonios/exportar${qs}`,
+        cookie ? { cookie } : {},
+        { id: String(areaId) },
+      );
+
+    // Sem cookie → 401 (guard idêntico ao GET da lista).
+    const semCookie = await exportar(undefined, areaA);
+    expect(semCookie.status).toBe(401);
+    expect(await semCookie.json()).toEqual({ erro: "Não autenticado" });
+
+    // Área privada p/ não-membro → 404 uniforme (mesmo corpo do id inexistente).
+    const naoMembro = await exportar(tokens.secretaria, areaB);
+    expect(naoMembro.status).toBe(404);
+    const corpo404 = await naoMembro.json();
+    expect(corpo404).toEqual({ erro: "Área não encontrada" });
+    const inexistente = await exportar(tokens.secretaria, 999999999);
+    expect(inexistente.status).toBe(404);
+    expect(await inexistente.json()).toEqual(corpo404);
+
+    // Membro VIEWER → 200 + headers de PDF + corpo começa com %PDF.
+    const ok = await exportar(tokens.outro, areaA);
+    expect(ok.status).toBe(200);
+    expect(ok.headers.get("content-type")).toBe("application/pdf");
+    expect(ok.headers.get("content-disposition")).toBe(
+      `attachment; filename="patrimonio-${slugA}.pdf"`,
+    );
+    const bytes = new Uint8Array(await ok.arrayBuffer());
+    expect(bytes.length).toBeGreaterThan(0);
+    expect(new TextDecoder().decode(bytes.subarray(0, 5))).toBe("%PDF-");
+
+    // Paridade de params: busca/col/dir/pendente aceitos → 200; coluna fora do
+    // allowlist → 400 (mesma validação da lista).
+    for (const qs of ["?q=PAT", "?col=descricao&dir=desc", "?col=numero&dir=asc&pendente=detentor"]) {
+      const res = await exportar(tokens.outro, areaA, qs);
+      expect(res.status).toBe(200);
+    }
+    const invalido = await exportar(tokens.outro, areaA, "?col=id");
+    expect(invalido.status).toBe(400);
+    expect(await invalido.json()).toEqual({ erro: "Parâmetros inválidos" });
+
+    // Área com 0 itens → 200 (PDF de "Nenhum item", não é erro).
+    const resC = await call(areasPOST, "POST", "/api/areas", {
+      body: { nome: `Patr Vazia ${SUFFIX}` },
+      cookie: tokens.secretaria,
+      ip: "10.4.0.4",
+    });
+    expect(resC.status).toBe(201);
+    const areaC = ((await resC.json()) as { area: { id: number } }).area.id;
+    const vazio = await exportar(tokens.secretaria, areaC);
+    expect(vazio.status).toBe(200);
+    expect(vazio.headers.get("content-type")).toBe("application/pdf");
+    const bytesV = new Uint8Array(await vazio.arrayBuffer());
+    expect(new TextDecoder().decode(bytesV.subarray(0, 5))).toBe("%PDF-");
+
+    // Higiene: soft-delete da área scratch.
+    const del = await call(
+      areaDELETE,
+      "DELETE",
+      `/api/areas/${areaC}`,
+      { cookie: tokens.secretaria },
+      { id: String(areaC) },
+    );
+    expect(del.status).toBe(200);
   });
 });

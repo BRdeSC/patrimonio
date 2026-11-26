@@ -170,6 +170,31 @@ export type ColOrdenacao =
   | "localizacao"
   | "atualizadoEm";
 
+// ③-D: params da listagem — compartilhados pelo fetch e pelo "Exportar PDF":
+// o export repassa EXATAMENTE o que está na tela (busca/filtros/ordenação).
+function paramsLista(f: {
+  q: string;
+  det: string;
+  loc: string;
+  semDet: boolean;
+  semLoc: boolean;
+  col: ColOrdenacao | null;
+  dir: "asc" | "desc";
+}): URLSearchParams {
+  const p = new URLSearchParams();
+  if (f.q) p.set("q", f.q);
+  if (f.det) p.set("detentor", f.det);
+  if (f.loc) p.set("localizacao", f.loc);
+  if (f.semDet && f.semLoc) p.set("pendente", "ambos");
+  else if (f.semDet) p.set("pendente", "detentor");
+  else if (f.semLoc) p.set("pendente", "localizacao");
+  if (f.col) {
+    p.set("col", f.col);
+    p.set("dir", f.dir);
+  }
+  return p;
+}
+
 export function PatrimoniosPanel({
   areaId,
   papel,
@@ -241,20 +266,32 @@ export function PatrimoniosPanel({
     return () => clearTimeout(t);
   }, [busca, detF, locF]);
 
+  // ③-D: exporta a lista como exibida em PDF (mesmos params do fetch), em
+  // nova aba. Visível para quem lê a lista (VIEWER+).
+  function exportarPdf() {
+    const qs = paramsLista({
+      q: deb.q,
+      det: deb.det,
+      loc: deb.loc,
+      semDet,
+      semLoc,
+      col: ordCol,
+      dir: ordDir,
+    }).toString();
+    window.open(`${base}/exportar${qs ? `?${qs}` : ""}`, "_blank");
+  }
+
   useEffect(() => {
     let ativo = true;
-    const p = new URLSearchParams();
-    if (deb.q) p.set("q", deb.q);
-    if (deb.det) p.set("detentor", deb.det);
-    if (deb.loc) p.set("localizacao", deb.loc);
-    if (semDet && semLoc) p.set("pendente", "ambos");
-    else if (semDet) p.set("pendente", "detentor");
-    else if (semLoc) p.set("pendente", "localizacao");
-    if (ordCol) {
-      p.set("col", ordCol);
-      p.set("dir", ordDir);
-    }
-    const qs = p.toString();
+    const qs = paramsLista({
+      q: deb.q,
+      det: deb.det,
+      loc: deb.loc,
+      semDet,
+      semLoc,
+      col: ordCol,
+      dir: ordDir,
+    }).toString();
     fetch(`${base}${qs ? `?${qs}` : ""}`)
       .then(async (res) => {
         if (!ativo) return;
@@ -704,6 +741,13 @@ export function PatrimoniosPanel({
                 />
                 Sem localização
               </label>
+              <button
+                type="button"
+                onClick={exportarPdf}
+                className={`${BOTAO} mb-1`}
+              >
+                Exportar PDF
+              </button>
               {podeEditar && (
                 <button
                   type="button"
